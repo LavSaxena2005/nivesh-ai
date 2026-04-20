@@ -98,3 +98,44 @@ def video():
     return {
         "script": "📊 Market Update:\n\nReliance under pressure, IT stable, market mixed."
     }
+# ---------------- TRADE STORAGE ----------------
+trades = []
+
+# ---------------- TRADE EXECUTION ----------------
+@app.post("/trade")
+def execute_trade(stock: str, price: float, qty: int, side: str):
+    trade = {
+        "stock": stock,
+        "price": price,
+        "qty": qty,
+        "side": side
+    }
+    trades.append(trade)
+    return {"message": "Trade executed", "trade": trade}
+
+# ---------------- PNL ----------------
+@app.get("/pnl")
+def calculate_pnl():
+    pnl = 0
+    for t in trades:
+        if t["side"] == "BUY":
+            pnl -= t["price"] * t["qty"]
+        else:
+            pnl += t["price"] * t["qty"]
+
+    return {"pnl": pnl}
+# ---------------- PORTFOLIO ----------------
+@app.get("/portfolio")
+def get_portfolio():
+    portfolio = {}
+
+    for t in trades:
+        stock = t["stock"]
+        qty = t["qty"] if t["side"] == "BUY" else -t["qty"]
+
+        if stock not in portfolio:
+            portfolio[stock] = 0
+
+        portfolio[stock] += qty
+
+    return {"portfolio": portfolio, "total_trades": len(trades)}
