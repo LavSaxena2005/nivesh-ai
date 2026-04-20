@@ -99,3 +99,39 @@ if st.button("Generate Video Script"):
 
     except Exception as e:
         st.error(f"Error: {e}")
+        st.markdown("---")
+st.subheader("💰 Trade Simulator")
+
+stock_trade = st.text_input("Stock for trade")
+price = st.number_input("Price", value=100.0)
+qty = st.number_input("Quantity", value=1)
+
+if st.button("BUY"):
+    requests.post("http://127.0.0.1:8000/trade",
+                  params={"stock": stock_trade, "price": price, "qty": qty, "side": "BUY"})
+    st.success("BUY executed")
+
+if st.button("SELL"):
+    requests.post("http://127.0.0.1:8000/trade",
+                  params={"stock": stock_trade, "price": price, "qty": qty, "side": "SELL"})
+    st.success("SELL executed")
+
+if st.button("Check PnL"):
+    res = requests.get("http://127.0.0.1:8000/pnl")
+    st.info(f"PnL: ₹{res.json()['pnl']}")
+    st.markdown("---")
+st.subheader("📊 Portfolio Dashboard")
+
+if st.button("View Portfolio"):
+    res = requests.get("http://127.0.0.1:8000/portfolio")
+
+    if res.status_code == 200:
+        data = res.json()
+
+        st.write("📦 Holdings:")
+        for stock, qty in data["portfolio"].items():
+            st.write(f"{stock}: {qty} shares")
+
+        st.write(f"📊 Total Trades: {data['total_trades']}")
+    else:
+        st.error("Failed to load portfolio")
