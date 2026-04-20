@@ -20,3 +20,7 @@ uvicorn backend.main:app --reload
 
 Frontend:
 streamlit run streamlit_app/app.py
+
+Deployed :   
+https://nivesh-ai.onrender.com/
+https://nivesh-ai-1234.streamlit.app/
