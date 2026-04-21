@@ -170,22 +170,24 @@ st.markdown("---")
 st.markdown("## 📊 Portfolio")
 
 if st.button("View Portfolio"):
-    try:
-        res = requests.get(f"{BASE_URL}/portfolio")
+    with st.spinner("Loading portfolio..."):
+        try:
+            res = requests.get(f"{BASE_URL}/portfolio")
 
-        if res.status_code == 200:
-            data = res.json()
+            if res.status_code == 200:
+                data = res.json()
 
-            if len(data["portfolio"]) == 0:
-                st.warning("No trades yet")
+                if not data["portfolio"]:
+                    st.warning("No trades yet ⚠️")
+                else:
+                    st.success("Portfolio Loaded ✅")
+
+                    for stock, qty in data["portfolio"].items():
+                        st.write(f"{stock} → {qty} shares")
+
+                    st.write(f"Total Trades: {data['total_trades']}")
             else:
-                for k, v in data["portfolio"].items():
-                    st.write(f"{k}: {v} shares")
+                st.error("Backend error")
 
-                st.success("Portfolio loaded ✅")
-                st.write(f"Total Trades: {data['total_trades']}")
-        else:
-            st.error("Backend error")
-
-    except Exception as e:
-        st.error(f"Error: {e}")
+        except Exception as e:
+            st.error(f"Error: {e}")
