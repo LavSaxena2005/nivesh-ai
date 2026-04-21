@@ -6,6 +6,9 @@ from ta.trend import MACD
 
 app = FastAPI()
 
+# ---------------- GLOBAL STORAGE ----------------
+trades = []
+
 @app.get("/")
 def home():
     return {"message": "Nivesh AI running 🚀"}
@@ -22,11 +25,11 @@ def add_indicators(df):
 
 def get_safe_rsi(df):
     rsi_series = df['rsi'].dropna()
-    return float(rsi_series.iloc[-1].item()) if len(rsi_series) > 0 else 50.0
+    return float(rsi_series.iloc[-1]) if len(rsi_series) > 0 else 50.0
 
 def detect_signal(df):
-    latest = float(df['Close'].iloc[-1].item())
-    prev = float(df['Close'].iloc[-2].item())
+    latest = float(df['Close'].iloc[-1])
+    prev = float(df['Close'].iloc[-2])
     change = (latest - prev) / prev
 
     if change > 0.03:
@@ -47,7 +50,7 @@ def analyze(stock: str):
 
     signal, change = detect_signal(df)
     rsi = get_safe_rsi(df)
-    price = float(df['Close'].iloc[-1].item())
+    price = float(df['Close'].iloc[-1])
 
     return {
         "stock": stock,
@@ -83,10 +86,11 @@ def scan():
             })
 
         except Exception as e:
-            print(f"Error in {s}: {e}")
+            print(e)
             continue
 
     return results
+
 # ---------------- CHAT ----------------
 @app.get("/chat")
 def chat(query: str):
@@ -96,46 +100,52 @@ def chat(query: str):
 @app.get("/video")
 def video():
     return {
-        "script": "📊 Market Update:\n\nReliance under pressure, IT stable, market mixed."
+        "script": "📊 Market Update:\nReliance weak, IT stable, market mixed."
     }
-# ---------------- TRADE STORAGE ----------------
-trades = []
 
-# ---------------- TRADE EXECUTION ----------------
+# ---------------- TRADE ----------------
 @app.post("/trade")
-def execute_trade(stock: str, price: float, qty: int, side: str):
-    trade = {
+def trade(stock: str, price: float, qty: int, side: str):
+    trade_data = {
         "stock": stock,
         "price": price,
         "qty": qty,
         "side": side
     }
-    trades.append(trade)
-    return {"message": "Trade executed", "trade": trade}
+    trades.append(trade_data)
+
+    return {
+        "message": "Trade executed",
+        "total_trades": len(trades)
+    }
 
 # ---------------- PNL ----------------
 @app.get("/pnl")
-def calculate_pnl():
-    pnl = 0
+def pnl():
+    total = 0
+
     for t in trades:
         if t["side"] == "BUY":
-            pnl -= t["price"] * t["qty"]
+            total -= t["price"] * t["qty"]
         else:
-            pnl += t["price"] * t["qty"]
+            total += t["price"] * t["qty"]
 
-    return {"pnl": pnl}
+    return {"pnl": total}
+
 # ---------------- PORTFOLIO ----------------
 @app.get("/portfolio")
-def get_portfolio():
-    portfolio = {}
+def portfolio():
+    data = {}
 
     for t in trades:
-        stock = t["stock"]
         qty = t["qty"] if t["side"] == "BUY" else -t["qty"]
 
-        if stock not in portfolio:
-            portfolio[stock] = 0
+        if t["stock"] not in data:
+            data[t["stock"]] = 0
 
-        portfolio[stock] += qty
+        data[t["stock"]] += qty
 
-    return {"portfolio": portfolio, "total_trades": len(trades)}
+    return {
+        "portfolio": data,
+        "total_trades": len(trades)
+    }
