@@ -16,17 +16,27 @@ stock = st.text_input("Enter Stock (e.g. RELIANCE.NS)", key="stock_main")
 
 if st.button("Analyze Stock"):
     if stock:
-        res = requests.get(f"{BASE_URL}/analyze", params={"stock": stock}).json()
+        try:
+            res = requests.get(f"{BASE_URL}/analyze", params={"stock": stock})
 
-        if "error" in res:
-            st.error(res["error"])
-        else:
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Price", f"₹{round(res['price'],2)}")
-            c2.metric("Signal", res["signal"])
-            c3.metric("RSI", round(res["rsi"],2))
+            if res.status_code == 200:
+                data = res.json()
 
-            st.info(res.get("ai", "No AI insight"))
+                if "error" in data:
+                    st.error(data["error"])
+                else:
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("💰 Price", f"₹{round(data['price'],2)}")
+                    c2.metric("📉 Signal", data["signal"])
+                    c3.metric("📊 RSI", round(data["rsi"],2))
+
+                    st.success("Analysis Loaded ✅")
+                    st.info(data.get("ai", "No AI insight"))
+            else:
+                st.error("Backend error ❌")
+
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # ---------------- CHART ----------------
 if stock:
@@ -41,13 +51,22 @@ st.markdown("---")
 st.markdown("## 📊 Opportunity Radar")
 
 if st.button("Scan Market"):
-    res = requests.get(f"{BASE_URL}/scan").json()
+    try:
+        res = requests.get(f"{BASE_URL}/scan")
 
-    if len(res) == 0:
-        st.warning("No opportunities found")
-    else:
-        for s in res:
-            st.success(f"{s['stock']} → {s['signal']} | RSI {round(s['rsi'],2)}")
+        if res.status_code == 200:
+            data = res.json()
+
+            if len(data) == 0:
+                st.warning("No opportunities found")
+            else:
+                for s in data:
+                    st.success(f"{s['stock']} → {s['signal']} | RSI {round(s['rsi'],2)}")
+        else:
+            st.error("Backend error")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 # ---------------- CHAT ----------------
 st.markdown("---")
@@ -57,16 +76,38 @@ query = st.text_input("Ask something", key="chat")
 
 if st.button("Ask AI"):
     if query:
-        res = requests.get(f"{BASE_URL}/chat", params={"query": query}).json()
-        st.info(res["answer"])
+        with st.spinner("Thinking..."):
+            try:
+                res = requests.get(f"{BASE_URL}/chat", params={"query": query})
+
+                if res.status_code == 200:
+                    data = res.json()
+                    st.success("Response received ✅")
+                    st.info(data.get("answer", "No answer"))
+                else:
+                    st.error("Backend not responding ❌")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 # ---------------- VIDEO ----------------
 st.markdown("---")
 st.markdown("## 🎥 Market Update")
 
 if st.button("Generate Update"):
-    res = requests.get(f"{BASE_URL}/video").json()
-    st.success(res["script"])
+    with st.spinner("Generating..."):
+        try:
+            res = requests.get(f"{BASE_URL}/video")
+
+            if res.status_code == 200:
+                data = res.json()
+                st.success("Update Generated ✅")
+                st.write(data["script"])
+            else:
+                st.error("Backend error")
+
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # ---------------- TRADE ----------------
 st.markdown("---")
@@ -87,42 +128,64 @@ col4, col5, col6 = st.columns(3)
 
 with col4:
     if st.button("BUY"):
-        if stock_trade:
+        try:
             requests.post(f"{BASE_URL}/trade", params={
                 "stock": stock_trade,
                 "price": price,
                 "qty": qty,
                 "side": "BUY"
             })
-            st.success("BUY executed")
+            st.success("BUY executed ✅")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 with col5:
     if st.button("SELL"):
-        if stock_trade:
+        try:
             requests.post(f"{BASE_URL}/trade", params={
                 "stock": stock_trade,
                 "price": price,
                 "qty": qty,
                 "side": "SELL"
             })
-            st.success("SELL executed")
+            st.success("SELL executed ✅")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 with col6:
     if st.button("Check PnL"):
-        res = requests.get(f"{BASE_URL}/pnl").json()
-        st.info(f"PnL: ₹{res['pnl']}")
+        try:
+            res = requests.get(f"{BASE_URL}/pnl")
+
+            if res.status_code == 200:
+                st.info(f"PnL: ₹{res.json()['pnl']}")
+            else:
+                st.error("Failed to fetch PnL")
+
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # ---------------- PORTFOLIO ----------------
 st.markdown("---")
 st.markdown("## 📊 Portfolio")
 
 if st.button("View Portfolio"):
-    res = requests.get(f"{BASE_URL}/portfolio").json()
+    try:
+        res = requests.get(f"{BASE_URL}/portfolio")
 
-    if len(res["portfolio"]) == 0:
-        st.warning("No trades yet")
-    else:
-        for k, v in res["portfolio"].items():
-            st.write(f"{k}: {v} shares")
+        if res.status_code == 200:
+            data = res.json()
 
-        st.write(f"Total Trades: {res['total_trades']}")
+            if len(data["portfolio"]) == 0:
+                st.warning("No trades yet")
+            else:
+                for k, v in data["portfolio"].items():
+                    st.write(f"{k}: {v} shares")
+
+                st.success("Portfolio loaded ✅")
+                st.write(f"Total Trades: {data['total_trades']}")
+        else:
+            st.error("Backend error")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
