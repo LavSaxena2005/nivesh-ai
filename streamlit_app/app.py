@@ -4,134 +4,116 @@ import requests
 BASE_URL = "https://nivesh-backend.onrender.com"
 
 st.set_page_config(page_title="Nivesh AI", layout="wide")
-st.title("📊 Nivesh AI (API Powered)")
 
-# ---------------- INPUT ----------------
-stock = st.text_input("Enter Stock (e.g. RELIANCE.NS)")
+# ---------------- HEADER ----------------
+st.markdown("<h1 style='text-align:center;color:#00ADB5;'>📊 Nivesh AI</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Smart Investing Made Simple</p>", unsafe_allow_html=True)
 
-# ---------------- ANALYZE ----------------
-if st.button("Analyze Stock"):
-    if stock:
-        try:
-            res = requests.get(f"{BASE_URL}/analyze", params={"stock": stock})
+# ---------------- STOCK ----------------
+st.markdown("## 📈 Stock Analysis")
 
-            if res.status_code == 200:
-                data = res.json()
+col1, col2 = st.columns([3,1])
 
-                if "error" in data:
-                    st.error(data["error"])
-                else:
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("💰 Price", f"₹{round(data['price'],2)}")
-                    col2.metric("📉 Signal", data["signal"])
-                    col3.metric("📊 RSI", round(data["rsi"],2))
+with col1:
+    stock = st.text_input("Enter Stock (e.g. RELIANCE.NS)")
 
-                    st.info(data.get("ai", "AI insight not available"))
+with col2:
+    analyze = st.button("Analyze")
 
-                    if data["recommendation"] == "BUY":
-                        st.success("🟢 BUY")
-                    elif data["recommendation"] == "SELL":
-                        st.error("🔴 SELL")
-                    else:
-                        st.warning("🟡 HOLD")
+if analyze and stock:
+    res = requests.get(f"{BASE_URL}/analyze", params={"stock": stock}).json()
 
-            else:
-                st.error("Backend error")
+    if "error" in res:
+        st.error(res["error"])
+    else:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Price", f"₹{round(res['price'],2)}")
+        c2.metric("Signal", res["signal"])
+        c3.metric("RSI", round(res["rsi"],2))
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+        st.info(res["ai"])
 
-# ---------------- SCAN ----------------
-st.subheader("📊 Opportunity Radar")
+# ---------------- CHART ----------------
+st.markdown("## 📈 Live Chart")
+
+if stock:
+    st.components.v1.iframe(
+        f"https://s.tradingview.com/widgetembed/?symbol={stock}&interval=D&theme=dark",
+        height=500
+    )
+
+# ---------------- RADAR ----------------
+st.markdown("## 📊 Opportunity Radar")
 
 if st.button("Scan Market"):
-    try:
-        res = requests.get(f"{BASE_URL}/scan")
+    res = requests.get(f"{BASE_URL}/scan").json()
 
-        if res.status_code == 200:
-            data = res.json()
-
-            if len(data) == 0:
-                st.warning("No opportunities found")
-            else:
-                for s in data:
-                    st.success(
-                        f"{s['stock']} → {s['signal']} | RSI: {round(s['rsi'],2)}"
-                    )
-        else:
-            st.error("Backend error")
-
-    except Exception as e:
-        st.error(f"Error: {e}")
+    for s in res:
+        st.success(f"{s['stock']} → {s['signal']} | RSI {round(s['rsi'],2)}")
 
 # ---------------- CHAT ----------------
-st.subheader("🤖 Market ChatGPT")
+st.markdown("## 🤖 Market Chat")
 
 query = st.text_input("Ask something")
 
 if st.button("Ask AI"):
-    if query:
-        try:
-            res = requests.get(f"{BASE_URL}/chat", params={"query": query})
-
-            if res.status_code == 200:
-                data = res.json()
-                st.info(data["answer"])
-            else:
-                st.error("Backend error")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
+    res = requests.get(f"{BASE_URL}/chat", params={"query": query}).json()
+    st.info(res["answer"])
 
 # ---------------- VIDEO ----------------
-st.subheader("🎥 AI Market Video")
+st.markdown("## 🎥 Market Update")
 
-if st.button("Generate Video Script"):
-    try:
-        res = requests.get(f"{BASE_URL}/video")
+if st.button("Generate Update"):
+    res = requests.get(f"{BASE_URL}/video").json()
+    st.success(res["script"])
 
-        if res.status_code == 200:
-            data = res.json()
-            st.success("🎬 Market Update")
-            st.write(data["script"])
-        else:
-            st.error("Backend error")
+# ---------------- TRADE ----------------
+st.markdown("## 💰 Trade Simulator")
 
-    except Exception as e:
-        st.error(f"Error: {e}")
-        st.markdown("---")
-st.subheader("💰 Trade Simulator")
+colA, colB, colC = st.columns(3)
 
-stock_trade = st.text_input("Stock for trade")
-price = st.number_input("Price", value=100.0)
-qty = st.number_input("Quantity", value=1)
+with colA:
+    stock_trade = st.text_input("Stock")
 
-if st.button("BUY"):
-    requests.post("http://127.0.0.1:8000/trade",
-                  params={"stock": stock_trade, "price": price, "qty": qty, "side": "BUY"})
-    st.success("BUY executed")
+with colB:
+    price = st.number_input("Price", value=100.0)
 
-if st.button("SELL"):
-    requests.post("http://127.0.0.1:8000/trade",
-                  params={"stock": stock_trade, "price": price, "qty": qty, "side": "SELL"})
-    st.success("SELL executed")
+with colC:
+    qty = st.number_input("Qty", value=1)
+
+colD, colE = st.columns(2)
+
+with colD:
+    if st.button("BUY"):
+        requests.post(f"{BASE_URL}/trade", params={
+            "stock": stock_trade,
+            "price": price,
+            "qty": qty,
+            "side": "BUY"
+        })
+        st.success("BUY executed")
+
+with colE:
+    if st.button("SELL"):
+        requests.post(f"{BASE_URL}/trade", params={
+            "stock": stock_trade,
+            "price": price,
+            "qty": qty,
+            "side": "SELL"
+        })
+        st.success("SELL executed")
 
 if st.button("Check PnL"):
-    res = requests.get("http://127.0.0.1:8000/pnl")
-    st.info(f"PnL: ₹{res.json()['pnl']}")
-    st.markdown("---")
-st.subheader("📊 Portfolio Dashboard")
+    res = requests.get(f"{BASE_URL}/pnl").json()
+    st.info(f"PnL: ₹{res['pnl']}")
+
+# ---------------- PORTFOLIO ----------------
+st.markdown("## 📊 Portfolio")
 
 if st.button("View Portfolio"):
-    res = requests.get("http://127.0.0.1:8000/portfolio")
+    res = requests.get(f"{BASE_URL}/portfolio").json()
 
-    if res.status_code == 200:
-        data = res.json()
+    for k, v in res["portfolio"].items():
+        st.write(f"{k}: {v} shares")
 
-        st.write("📦 Holdings:")
-        for stock, qty in data["portfolio"].items():
-            st.write(f"{stock}: {qty} shares")
-
-        st.write(f"📊 Total Trades: {data['total_trades']}")
-    else:
-        st.error("Failed to load portfolio")
+    st.write(f"Total Trades: {res['total_trades']}")
